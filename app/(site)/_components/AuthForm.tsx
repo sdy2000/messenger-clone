@@ -1,6 +1,8 @@
 "use client";
 
 import axios from "axios";
+import { toast } from "react-hot-toast";
+import { signIn } from "next-auth/react";
 import { useCallback, useState } from "react";
 import { FieldValues, SubmitHandler, useForm } from "react-hook-form";
 
@@ -24,11 +26,26 @@ export const AuthForm = () => {
     setIsLoading(true);
 
     if (variant === "REGISTER") {
-      axios.post("/api/register", data);
+      toast
+        .promise(axios.post("/api/register", data), {
+          loading: "Loading...",
+          success: <b>Registered User</b>,
+          error: <b>Something went wrong!</b>,
+        })
+        .finally(() => setIsLoading(false));
     }
 
     if (variant === "LOGIN") {
-      // NextAuth SingIn
+      signIn("credentials", {
+        ...data,
+        redirect: false,
+      })
+        .then((callback) => {
+          console.log(callback); //! Error 401 from next auth
+          if (callback?.error) toast.error("Invalid credentials!");
+          if (callback?.ok && !callback?.error) toast.success("Login in!");
+        })
+        .finally(() => setIsLoading(false));
     }
   };
 
