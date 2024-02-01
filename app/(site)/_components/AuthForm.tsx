@@ -1,5 +1,6 @@
 "use client";
 
+import axios from "axios";
 import { useCallback, useState } from "react";
 import { FieldValues, SubmitHandler, useForm } from "react-hook-form";
 
@@ -23,7 +24,7 @@ export const AuthForm = () => {
     setIsLoading(true);
 
     if (variant === "REGISTER") {
-      // Axios Register
+      axios.post("/api/register", data);
     }
 
     if (variant === "LOGIN") {
@@ -46,6 +47,7 @@ export const AuthForm = () => {
       name: "",
       email: "",
       password: "",
+      confirm_password: "",
     },
   });
 
@@ -80,7 +82,7 @@ export const AuthForm = () => {
           />
           {variant === "REGISTER" && (
             <Input
-              id="confirm-password"
+              id="confirm_password"
               label="Confirm Password"
               type="password"
               register={register}
