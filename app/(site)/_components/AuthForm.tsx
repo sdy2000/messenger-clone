@@ -2,8 +2,9 @@
 
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { signIn } from "next-auth/react";
-import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
+import { useCallback, useEffect, useState } from "react";
 import { FieldValues, SubmitHandler, useForm } from "react-hook-form";
 
 import { FcGoogle } from "react-icons/fc";
@@ -14,24 +15,39 @@ import { Button, Input } from "@/app/components";
 import { AuthSocialButton } from ".";
 
 export const AuthForm = () => {
+  const session = useSession();
+  const router = useRouter();
+
   const [variant, setVariant] = useState<Variant>("LOGIN");
   const [isLoading, setIsLoading] = useState(false);
 
+  //? Check user authenticated and route other page
+  useEffect(() => {
+    if (session?.status === "authenticated") router.push("/users");
+  }, [session?.status, router]);
+
+  //? Toggle between Login and Register
   const toggleVariant = useCallback(() => {
     if (variant == "LOGIN") setVariant("REGISTER");
     else setVariant("LOGIN");
   }, [variant]);
 
+  //? Submit form as simple credential authorization
   const onSubmit: SubmitHandler<FieldValues> = (data) => {
     setIsLoading(true);
 
     if (variant === "REGISTER") {
       toast
-        .promise(axios.post("/api/register", data), {
-          loading: "Loading...",
-          success: <b>Registered User</b>,
-          error: <b>Something went wrong!</b>,
-        })
+        .promise(
+          axios
+            .post("/api/register", data)
+            .then(() => signIn("credentials", data)),
+          {
+            loading: "Loading...",
+            success: <b>Registered User</b>,
+            error: <b>Something went wrong!</b>,
+          }
+        )
         .finally(() => setIsLoading(false));
     }
 
@@ -41,18 +57,26 @@ export const AuthForm = () => {
         redirect: false,
       })
         .then((callback) => {
-          console.log(callback); //! Error 401 from next auth
           if (callback?.error) toast.error("Invalid credentials!");
-          if (callback?.ok && !callback?.error) toast.success("Login in!");
+          if (callback?.ok && !callback?.error) {
+            toast.success("Login in!");
+          }
         })
         .finally(() => setIsLoading(false));
     }
   };
 
+  //? Login or Register from Github or google provider
   const socialAction = (action: "github" | "google") => {
     setIsLoading(true);
 
-    // NextAuth Social Sing In
+    signIn(action, { redirect: false })
+      .then((callback) => {
+        if (callback?.error) toast.error("Invalid Credentials!");
+
+        if (callback?.ok && !callback?.error) toast.success("Logged in!");
+      })
+      .finally(() => setIsLoading(false));
   };
 
   const {
@@ -133,7 +157,8 @@ export const AuthForm = () => {
 
             <AuthSocialButton
               icon={FcGoogle}
-              onClick={() => socialAction("github")}
+              onClick={() => socialAction("google")}
+              isDisabled={true}
             />
           </div>
         </div>
